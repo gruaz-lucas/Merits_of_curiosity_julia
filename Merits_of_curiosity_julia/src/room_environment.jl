@@ -54,6 +54,23 @@ mutable struct Grid
     end
 end
 
+mutable struct EnvParams
+    n_init_states::Int
+    branching_rate::Float64
+    room_size::Int
+    p_room::Float64
+    p_sink::Float64
+    p_source::Float64
+    p_stoc::Float64
+    n_edges_per_sink::Int
+    n_edges_per_source::Int
+    uncontrollability::Float64
+
+    function EnvParams(n_init_states, branching_rate, room_size, p_room, p_sink, p_source, p_stoc, n_edges_per_sink, n_edges_per_source, uncontrollability)
+        new(n_init_states, branching_rate, room_size, p_room, p_sink, p_source, p_stoc, n_edges_per_sink, n_edges_per_source, uncontrollability)
+    end
+end
+
 """
 RoomEnvironment: A custom environment simulating a graph-based room structure.
 """
@@ -103,6 +120,21 @@ mutable struct RoomEnvironment
         env.max_actions = maximum(env.n_actions_per_state)
         env.transition_matrix, env.reward_matrix = generate_transition_matrix!(env)
         return env
+    end
+
+    function RoomEnvironment(env_params::EnvParams)
+        return RoomEnvironment(
+            n_init_states=env_params.n_init_states,
+            branching_rate=env_params.branching_rate,
+            room_size=env_params.room_size,
+            p_room=env_params.p_room,
+            p_sink=env_params.p_sink,
+            p_source=env_params.p_source,
+            p_stoc=env_params.p_stoc,
+            n_edges_per_sink=env_params.n_edges_per_sink,
+            n_edges_per_source=env_params.n_edges_per_source,
+            uncontrollability=env_params.uncontrollability
+        )
     end
 end
 
@@ -417,3 +449,10 @@ function compute_node_properties(env)
 end
 
 export RoomEnvironment, reset!, step!, render
+
+function add_random_goal!(env::RoomEnvironment)
+    # assign a random state to be a goal state: reaching it gives a reward of 1
+    goal_state = rand(1:env.n_tot_states)
+    env.reward_matrix[:,:,goal_state] .= 1.0
+    return env, goal_state
+end

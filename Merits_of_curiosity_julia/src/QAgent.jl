@@ -51,6 +51,8 @@ mutable struct QAgent
     sp_TPS::Int64
 
     model_fixed::Bool               # Whether the environment is known or not
+    extr_reward_encounter_time::Int64 # First time the agent encounters an extrinsic reward
+    is_greedy::Bool
 end
 
 
@@ -109,8 +111,10 @@ function QAgent(e::Float64, b_i::Float64, b_e::Float64, l_i::Float64, l_e::Float
     sp_M = zeros(Float64, n_states, n_states)
 
     model_fixed = false
+    extr_reward_encounter_time = -1
+    is_greedy = false
     # Create the agent and return it
-    return QAgent(e, b_i, b_e, l_i, l_e, T_PS, Rhat_0, st, Qe_sa, Qi_sa, Ue_1_s, Ui_1_s, C_sa_s, C_sa, C_s, CumReward_sa_s, Ri_sa_s, intrinsic_type, Phat_sa_s, Rhat_sa_s, pi_a, at, n_states, n_actions_per_state, max_actions, update_reward, nov_ig_alpha, mop_α, mop_β, mop_V, mop_π, sp_M, sp_α, sp_TPS, model_fixed)
+    return QAgent(e, b_i, b_e, l_i, l_e, T_PS, Rhat_0, st, Qe_sa, Qi_sa, Ue_1_s, Ui_1_s, C_sa_s, C_sa, C_s, CumReward_sa_s, Ri_sa_s, intrinsic_type, Phat_sa_s, Rhat_sa_s, pi_a, at, n_states, n_actions_per_state, max_actions, update_reward, nov_ig_alpha, mop_α, mop_β, mop_V, mop_π, sp_M, sp_α, sp_TPS, model_fixed, extr_reward_encounter_time, is_greedy)
 end
 
 
@@ -151,6 +155,11 @@ function compute_policy(agent::QAgent, s)
         pi_a = replace(pi_a, NaN=>1)
         pi_a = pi_a ./ sum(pi_a)
     end
+    if agent.is_greedy
+        max_pi_ids = findall(x->x==maximum(pi_a), pi_a)
+        pi_a .= 0
+        pi_a[max_pi_ids] .= 1/length(max_pi_ids)
+    end
     return pi_a
 end
 
@@ -182,6 +191,10 @@ function update!(agent::QAgent, s_prime::Int64, r::Float64, t::Int64)
     agent.C_sa_s[agent.st, agent.at, s_prime] += 1
     agent.C_sa[agent.st, agent.at] += 1
     agent.C_s[s_prime] += 1
+
+    if agent.extr_reward_encounter_time == -1 && r > 0
+        agent.extr_reward_encounter_time = t
+    end
 
     # Update Phat, i.e the estimation of the transition probabilities
     if !agent.model_fixed

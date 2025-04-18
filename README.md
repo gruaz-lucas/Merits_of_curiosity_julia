@@ -13,4 +13,6 @@ If you use this code in your research or projects, please cite the following pap
 }
 ```
 
+For a simple example, run the notebook scripts/example.ipynb.
+
 If you have questions about the code, please contact Lucas Gruaz: lucas.gruaz@epfl.ch
